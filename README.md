@@ -7,7 +7,7 @@
 [![Downloads](https://static.pepy.tech/badge/winremote-mcp)](https://pepy.tech/projects/winremote-mcp)
 [![win-remote-mcp MCP server](https://glama.ai/mcp/servers/dddabtc/win-remote-mcp/badges/score.svg)](https://glama.ai/mcp/servers/dddabtc/win-remote-mcp)
 
-**The ultimate Windows MCP server for remote desktop control and automation.** Control any Windows machine through the Model Context Protocol — perfect for AI agents, Claude Desktop, and OpenClaw integration. Transform your Windows desktop into a powerful, remotely-accessible automation endpoint.
+**The ultimate Windows MCP server for remote desktop control and automation.** Control any Windows machine through the Model Context Protocol — perfect for AI agents, Claude Desktop. Transform your Windows desktop into a powerful, remotely-accessible automation endpoint.
 
 Run **on the Windows machine** you want to control. Built with [FastMCP](https://github.com/jlowin/fastmcp) and the [Model Context Protocol](https://modelcontextprotocol.io/).
 
@@ -21,7 +21,70 @@ pip install winremote-mcp
 winremote-mcp
 ```
 
-That's it! Your Windows MCP server is now running on `http://127.0.0.1:8090` and ready to accept commands from MCP clients like Claude Desktop or OpenClaw.
+That's it! Your Windows MCP server is now running on `http://127.0.0.1:8090` and ready to accept commands from MCP clients like Claude Desktop.
+
+## What's New in v0.4.9
+
+### 🔒 HTTPS / TLS Support
+
+You can now run WinRemote MCP over HTTPS — required for remote access and for tools like Claude Desktop that need a secure connection.
+
+**Step 1 — Generate a self-signed certificate** (for local/LAN use):
+```bash
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes
+```
+
+**Step 2 — Start the server with TLS:**
+```bash
+winremote serve --ssl-certfile cert.pem --ssl-keyfile key.pem --host 0.0.0.0 --port 8090
+```
+
+Or in `winremote.toml`:
+```toml
+[server]
+host         = "0.0.0.0"
+port         = 8090
+ssl_certfile = "C:/Users/you/cert.pem"
+ssl_keyfile  = "C:/Users/you/key.pem"
+```
+
+When active, the startup banner shows **`[https ON]`** and the server listens on `https://`.
+
+**Claude Desktop config** (`claude_desktop_config.json`):
+```json
+{
+  "mcpServers": {
+    "winremote": {
+      "type": "http",
+      "url": "https://192.168.1.100:8090/mcp/",
+      "headers": { "Authorization": "Bearer YOUR_AUTH_KEY" }
+    }
+  }
+}
+```
+
+> **Tip:** For a trusted certificate (no browser warning), use [mkcert](https://github.com/FiloSottile/mkcert): `mkcert -install && mkcert 192.168.1.100`
+
+---
+
+### 🔑 OAuth 2.0 Support (closes #33)
+
+WinRemote now ships a built-in OAuth 2.0 Authorization Server, so clients like Claude Desktop can authenticate via OAuth instead of a static API key.
+
+```bash
+winremote serve --ssl-certfile cert.pem --ssl-keyfile key.pem \
+                --oauth-client-id my-client --oauth-client-secret my-secret
+```
+
+The server exposes the standard MCP OAuth endpoints:
+- `GET /.well-known/oauth-authorization-server`
+- `POST /oauth/register`
+- `GET /oauth/authorize`
+- `POST /oauth/token`
+
+Startup banner shows **`[oauth ON]`** when enabled. Existing `--auth-key` Bearer token auth still works unchanged.
+
+---
 
 ## What's New in v0.4.8
 
@@ -89,6 +152,7 @@ winremote-mcp --port 8090 --no-auth
 ```
 
 > **Note:** winremote-mcp is a standard MCP server — it works with any MCP-compatible client, not just OpenClaw.
+
 
 ## Installation
 
@@ -162,11 +226,15 @@ Search order:
 host = "127.0.0.1"
 port = 8090
 auth_key = ""
+ssl_certfile = ""       # Path to SSL certificate for HTTPS
+ssl_keyfile = ""        # Path to SSL private key for HTTPS
 
 [security]
 ip_allowlist = ["127.0.0.1", "192.168.1.0/24"]
 enable_tier3 = false
 disable_tier2 = false
+oauth_client_id = ""    # Expected OAuth client ID (optional)
+oauth_client_secret = "" # OAuth client secret for confidential clients
 
 [tools]
 enable = ["Snapshot", "Click", "Type"]
@@ -184,6 +252,64 @@ winremote-mcp --ip-allowlist 127.0.0.1,192.168.1.0/24
 ```
 
 Supports both single IPs and CIDR ranges (IPv4/IPv6). Non-allowlisted clients receive HTTP 403 with a clear error.
+
+### HTTPS / TLS
+
+To enable HTTPS, provide SSL certificate and key files:
+
+```bash
+winremote serve --ssl-certfile cert.pem --ssl-keyfile key.pem
+```
+
+Or in `winremote.toml`:
+```toml
+[server]
+ssl_certfile = "/path/to/cert.pem"
+ssl_keyfile  = "/path/to/key.pem"
+```
+
+**Generate a self-signed certificate** (for local/LAN use):
+```bash
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes
+```
+
+### OAuth 2.0
+
+WinRemote MCP includes a built-in OAuth 2.0 Authorization Server, compatible with Claude Desktop and other MCP clients that require OAuth.
+
+Enable it with:
+```bash
+winremote serve --oauth-client-id my-client --oauth-client-secret my-secret
+```
+
+Or in `winremote.toml`:
+```toml
+[security]
+oauth_client_id     = "my-client"
+oauth_client_secret = "my-secret"
+```
+
+**Claude Desktop config** (`claude_desktop_config.json`):
+```json
+{
+  "mcpServers": {
+    "winremote": {
+      "type": "http",
+      "url": "https://your-host:8080/mcp/",
+      "oauth": {
+        "clientId": "my-client",
+        "clientSecret": "my-secret"
+      }
+    }
+  }
+}
+```
+
+The OAuth server implements:
+- `GET /.well-known/oauth-authorization-server` — server metadata (RFC 8414)
+- `POST /oauth/register` — dynamic client registration (RFC 7591)
+- `GET /oauth/authorize` — Authorization Code + PKCE (RFC 7636)
+- `POST /oauth/token` — token exchange
 
 ### Health check
 ```bash
@@ -214,7 +340,7 @@ winremote-mcp --reload
 }
 ```
 
-**For OpenClaw or other HTTP MCP clients:**
+**For HTTP MCP clients:**
 ```json
 {
   "mcpServers": {
