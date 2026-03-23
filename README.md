@@ -23,6 +23,179 @@ winremote-mcp
 
 That's it! Your Windows MCP server is now running on `http://127.0.0.1:8090` and ready to accept commands from MCP clients like Claude Desktop.
 
+## 🤖 OpenClaw Integration
+
+winremote-mcp is the official Windows control layer for [OpenClaw](https://github.com/openclaw/openclaw). Together they give your AI agent full remote control over any Windows machine — screenshots, PowerShell, file transfer, GUI automation, and more.
+
+---
+
+### The Easiest Way: Just Tell OpenClaw
+
+You don't need to configure anything manually. Just tell your OpenClaw agent:
+
+> "Install winremote-mcp on my Windows machine at `192.168.1.100` and connect it to yourself. Python is installed at `C:\Python311\python.exe`."
+
+OpenClaw will SSH into the Windows machine, install the package, start the server, and wire up the MCP connection — all automatically.
+
+---
+
+### Manual Setup (Step by Step)
+
+#### Step 1 — Install on Windows
+
+```cmd
+pip install winremote-mcp
+```
+
+#### Step 2 — Start the server
+
+**Quick start (no auth, trusted LAN only):**
+```cmd
+winremote serve --host 0.0.0.0 --port 8090
+```
+
+**With API key (recommended for remote access):**
+```cmd
+winremote serve --host 0.0.0.0 --port 8090 --auth-key YOUR_SECRET_KEY
+```
+
+**Auto-start on boot:**
+```cmd
+winremote install
+```
+
+#### Step 3 — Connect OpenClaw
+
+Add to your `openclaw.json`:
+
+```json
+{
+  "plugins": {
+    "entries": {
+      "winremote": {
+        "type": "mcp",
+        "url": "http://192.168.1.100:8090/mcp",
+        "headers": {
+          "Authorization": "Bearer YOUR_SECRET_KEY"
+        }
+      }
+    }
+  }
+}
+```
+
+Or tell your OpenClaw agent:
+> "Add winremote MCP at `http://192.168.1.100:8090/mcp` with auth key `YOUR_SECRET_KEY`."
+
+#### Step 4 — What your agent can do
+
+Once connected, your AI agent has full Windows control:
+
+| Capability | Example |
+|------------|---------|
+| 🖥️ Screenshots | Capture the full desktop or a specific window |
+| ⚡ Shell execution | Run PowerShell, CMD, or batch scripts |
+| 📁 File transfer | Upload/download files between Linux and Windows |
+| 🖱️ GUI automation | Click, type, drag — control any Windows app |
+| 🔧 System info | Process list, services, event logs, registry |
+| 📷 OCR | Extract text from any screen region |
+| 🎬 Screen recording | Record desktop activity as GIF |
+
+---
+
+### Secure Remote Access (HTTPS)
+
+For access over the internet or untrusted networks, enable HTTPS:
+
+**Step 1 — Generate a certificate:**
+```bash
+# Self-signed (LAN/homelab)
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes
+
+# Trusted cert (no browser warnings) — requires mkcert installed
+mkcert -install && mkcert 192.168.1.100
+```
+
+**Step 2 — Start with TLS:**
+```cmd
+winremote serve --host 0.0.0.0 --port 8090 ^
+  --auth-key YOUR_SECRET_KEY ^
+  --ssl-certfile cert.pem ^
+  --ssl-keyfile key.pem
+```
+
+**OpenClaw config with HTTPS:**
+```json
+{
+  "plugins": {
+    "entries": {
+      "winremote": {
+        "type": "mcp",
+        "url": "https://192.168.1.100:8090/mcp",
+        "headers": {
+          "Authorization": "Bearer YOUR_SECRET_KEY"
+        }
+      }
+    }
+  }
+}
+```
+
+---
+
+### OAuth 2.0 (for Claude Desktop and other MCP clients)
+
+Some MCP clients (like Claude Desktop) use OAuth instead of API keys. Enable it:
+
+```cmd
+winremote serve --host 0.0.0.0 --port 8090 ^
+  --ssl-certfile cert.pem --ssl-keyfile key.pem ^
+  --oauth-client-id my-client --oauth-client-secret my-secret
+```
+
+**Claude Desktop config (`claude_desktop_config.json`):**
+```json
+{
+  "mcpServers": {
+    "winremote": {
+      "type": "http",
+      "url": "https://192.168.1.100:8090/mcp/",
+      "oauth": {
+        "clientId": "my-client",
+        "clientSecret": "my-secret"
+      }
+    }
+  }
+}
+```
+
+---
+
+### `winremote.toml` — Full Config Reference
+
+Place in your working directory or `~/.config/winremote/winremote.toml`:
+
+```toml
+[server]
+host         = "0.0.0.0"
+port         = 8090
+auth_key     = "your-secret-key"
+ssl_certfile = "C:/certs/cert.pem"   # optional — enables HTTPS
+ssl_keyfile  = "C:/certs/key.pem"    # optional — enables HTTPS
+
+[security]
+ip_allowlist        = ["192.168.1.0/24"]   # restrict to LAN only
+oauth_client_id     = ""                    # optional OAuth client ID
+oauth_client_secret = ""                    # optional OAuth secret
+
+[tools]
+exclude = ["ScreenRecord"]   # disable specific tools
+```
+
+---
+
+> **Note:** winremote-mcp is a standard MCP server and works with any MCP-compatible client — Claude Desktop, Cursor, OpenClaw, and others.
+
 ## What's New in v0.4.9
 
 ### 🔒 HTTPS / TLS Support
@@ -110,49 +283,6 @@ Startup banner shows **`[oauth ON]`** when enabled. Existing `--auth-key` Bearer
 - **Network Tools** — Ping hosts, check TCP ports, monitor network connections
 - **Advanced Features** — OCR text extraction, screen recording (GIF), annotated screenshots with UI element labels
 - **Security & Auth** — Optional API key authentication, localhost-only binding by default
-
-## 🤖 OpenClaw Integration
-
-winremote-mcp works great with [OpenClaw](https://github.com/openclaw/openclaw) — providing full Windows desktop control as an MCP endpoint for AI agents.
-
-### Setup with OpenClaw
-
-1. **Start winremote-mcp on your Windows machine:**
-   ```bash
-   pip install winremote-mcp
-   winremote-mcp --port 8090
-   ```
-
-2. **Configure OpenClaw to use it** — add to your `openclaw.json`:
-   ```json
-   {
-     "plugins": {
-       "entries": {
-         "winremote": {
-           "type": "mcp",
-           "url": "http://<WINDOWS_IP>:8090/mcp"
-         }
-       }
-     }
-   }
-   ```
-
-3. **That's it.** Your AI agent can now:
-   - Execute PowerShell/CMD commands on Windows
-   - Take screenshots of the desktop
-   - Transfer files between Linux and Windows
-   - Control GUI applications
-   - Access Windows-specific tools and APIs
-
-### No-Auth Mode (for trusted networks)
-
-For home lab / LAN setups where authentication isn't needed:
-```bash
-winremote-mcp --port 8090 --no-auth
-```
-
-> **Note:** winremote-mcp is a standard MCP server — it works with any MCP-compatible client, not just OpenClaw.
-
 
 ## Installation
 
