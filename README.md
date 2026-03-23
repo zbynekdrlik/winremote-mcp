@@ -7,7 +7,7 @@
 [![Downloads](https://static.pepy.tech/badge/winremote-mcp)](https://pepy.tech/projects/winremote-mcp)
 [![win-remote-mcp MCP server](https://glama.ai/mcp/servers/dddabtc/win-remote-mcp/badges/score.svg)](https://glama.ai/mcp/servers/dddabtc/win-remote-mcp)
 
-**The ultimate Windows MCP server for remote desktop control and automation.** Control any Windows machine through the Model Context Protocol — perfect for AI agents, Claude Desktop, and OpenClaw integration. Transform your Windows desktop into a powerful, remotely-accessible automation endpoint.
+**The ultimate Windows MCP server for remote desktop control and automation.** Control any Windows machine through the Model Context Protocol — perfect for AI agents, Claude Desktop. Transform your Windows desktop into a powerful, remotely-accessible automation endpoint.
 
 Run **on the Windows machine** you want to control. Built with [FastMCP](https://github.com/jlowin/fastmcp) and the [Model Context Protocol](https://modelcontextprotocol.io/).
 
@@ -21,7 +21,7 @@ pip install winremote-mcp
 winremote-mcp
 ```
 
-That's it! Your Windows MCP server is now running on `http://127.0.0.1:8090` and ready to accept commands from MCP clients like Claude Desktop or OpenClaw.
+That's it! Your Windows MCP server is now running on `http://127.0.0.1:8090` and ready to accept commands from MCP clients like Claude Desktop.
 
 ## What's New in v0.4.9
 
@@ -110,48 +110,6 @@ Startup banner shows **`[oauth ON]`** when enabled. Existing `--auth-key` Bearer
 - **Network Tools** — Ping hosts, check TCP ports, monitor network connections
 - **Advanced Features** — OCR text extraction, screen recording (GIF), annotated screenshots with UI element labels
 - **Security & Auth** — Optional API key authentication, localhost-only binding by default
-
-## 🤖 OpenClaw Integration
-
-winremote-mcp works great with [OpenClaw](https://github.com/openclaw/openclaw) — providing full Windows desktop control as an MCP endpoint for AI agents.
-
-### Setup with OpenClaw
-
-1. **Start winremote-mcp on your Windows machine:**
-   ```bash
-   pip install winremote-mcp
-   winremote-mcp --port 8090
-   ```
-
-2. **Configure OpenClaw to use it** — add to your `openclaw.json`:
-   ```json
-   {
-     "plugins": {
-       "entries": {
-         "winremote": {
-           "type": "mcp",
-           "url": "http://<WINDOWS_IP>:8090/mcp"
-         }
-       }
-     }
-   }
-   ```
-
-3. **That's it.** Your AI agent can now:
-   - Execute PowerShell/CMD commands on Windows
-   - Take screenshots of the desktop
-   - Transfer files between Linux and Windows
-   - Control GUI applications
-   - Access Windows-specific tools and APIs
-
-### No-Auth Mode (for trusted networks)
-
-For home lab / LAN setups where authentication isn't needed:
-```bash
-winremote-mcp --port 8090 --no-auth
-```
-
-> **Note:** winremote-mcp is a standard MCP server — it works with any MCP-compatible client, not just OpenClaw.
 
 ## Installation
 
@@ -339,7 +297,7 @@ winremote-mcp --reload
 }
 ```
 
-**For OpenClaw or other HTTP MCP clients:**
+**For HTTP MCP clients:**
 ```json
 {
   "mcpServers": {
