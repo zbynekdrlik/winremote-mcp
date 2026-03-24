@@ -156,16 +156,16 @@ def _ensure_session_connected() -> str | None:
 )
 def Snapshot(
     use_vision: bool | str = True,
-    quality: int = 75,
-    max_width: int = 0,
+    quality: int = 40,
+    max_width: int = 1280,
     monitor: int = 0,
 ) -> list:
     """Capture desktop screenshot, window list, and interactive UI elements.
 
     Args:
         use_vision: Include screenshot image (default True).
-        quality: JPEG quality 1-100 (default 75). Lower = smaller.
-        max_width: Max image width in pixels. 0=native resolution (default). Set to e.g. 1920 to downscale.
+        quality: JPEG quality 1-100 (default 40). Lower = smaller.
+        max_width: Max image width in pixels. 0=native resolution. Default 1280 to keep images compact.
         monitor: Monitor to capture. 0=all monitors (default), 1/2/3=specific monitor.
 
     Returns a list containing:
@@ -508,20 +508,37 @@ def Shell(command: str, timeout: int = 30, cwd: str = "") -> str:
     try:
         if cwd:
             command = f"cd {cwd}; {command}"
-        result = subprocess.run(
+        proc = subprocess.Popen(
             ["powershell", "-NoProfile", "-Command", command],
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
-            timeout=timeout,
+            creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0),
         )
-        output = result.stdout
-        if result.stderr:
-            output += f"\n[STDERR] {result.stderr}"
-        if result.returncode != 0:
-            output += f"\n[Exit code: {result.returncode}]"
+        try:
+            stdout, stderr = proc.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            # Kill entire process tree, not just the parent
+            try:
+                subprocess.run(
+                    ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                    capture_output=True,
+                    timeout=5,
+                )
+            except Exception:
+                pass
+            proc.kill()
+            try:
+                proc.communicate(timeout=5)
+            except Exception:
+                pass
+            return f"Command timed out after {timeout}s"
+        output = stdout
+        if stderr:
+            output += f"\n[STDERR] {stderr}"
+        if proc.returncode != 0:
+            output += f"\n[Exit code: {proc.returncode}]"
         return output.strip() or "(no output)"
-    except subprocess.TimeoutExpired:
-        return f"Command timed out after {timeout}s"
     except Exception as e:
         return f"Shell error: {e}"
 
@@ -1335,8 +1352,8 @@ def ScreenRecord(
 )
 def AnnotatedSnapshot(
     max_elements: int = 30,
-    quality: int = 75,
-    max_width: int = 0,
+    quality: int = 40,
+    max_width: int = 1280,
 ) -> list:
     """Take a screenshot with numbered labels on interactive UI elements.
 
