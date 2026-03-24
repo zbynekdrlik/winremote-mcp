@@ -159,7 +159,7 @@ def _get_monitor_bbox(monitor: int) -> tuple[int, int, int, int] | None:
         raise
 
 
-def take_screenshot(quality: int = 40, max_width: int = 1280, monitor: int = 0) -> str:
+def take_screenshot(quality: int = 65, max_width: int = 1280, monitor: int = 0) -> str:
     """Capture screen, return base64 JPEG. Resizes if wider than max_width.
 
     Args:

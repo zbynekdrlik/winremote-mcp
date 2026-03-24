@@ -156,7 +156,7 @@ def _ensure_session_connected() -> str | None:
 )
 def Snapshot(
     use_vision: bool | str = True,
-    quality: int = 40,
+    quality: int = 65,
     max_width: int = 1280,
     monitor: int = 0,
 ) -> list:
@@ -164,7 +164,7 @@ def Snapshot(
 
     Args:
         use_vision: Include screenshot image (default True).
-        quality: JPEG quality 1-100 (default 40). Lower = smaller.
+        quality: JPEG quality 1-100 (default 65). Lower = smaller.
         max_width: Max image width in pixels. 0=native resolution. Default 1280 to keep images compact.
         monitor: Monitor to capture. 0=all monitors (default), 1/2/3=specific monitor.
 
@@ -1352,7 +1352,7 @@ def ScreenRecord(
 )
 def AnnotatedSnapshot(
     max_elements: int = 30,
-    quality: int = 40,
+    quality: int = 65,
     max_width: int = 1280,
 ) -> list:
     """Take a screenshot with numbered labels on interactive UI elements.
